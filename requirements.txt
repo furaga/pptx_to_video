@@ -1,0 +1,3 @@
+ruff
+#python-opencv
+#moviepy
