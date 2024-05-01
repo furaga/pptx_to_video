@@ -4,3 +4,4 @@ moviepy
 simpleaudio
 beautifulsoup4
 pyyaml
+comtypes

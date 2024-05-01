@@ -1,22 +1,51 @@
 import shutil
 from pathlib import Path
 import moviepy.editor
+import comtypes.client
+
 from .TextToSpeech import TextToSpeech
 
 class Project:
-    def __init__(self, workdir: Path) -> None:
-        self.workdir = Path(workdir)
+    def __init__(self, pptx_path: Path) -> None:
+        self.pptx_path = Path(pptx_path)
+ 
+        self.workdir = self.pptx_path.with_suffix("")
         self.workdir.mkdir(parents=True, exist_ok=True)
-        self.tts = TextToSpeech()
         print("Created workdir:", self.workdir)
+ 
+        self.tts = TextToSpeech()
+
+        self.import_pptx()
 
     def close(self):
         shutil.rmtree(self.workdir)
         print("Removed workdir:", self.workdir)
         
-    def from_pptx(self, pptx_path: Path) -> bool:
-        # TODO: Implement this method
-        return True
+    def import_pptx(self) -> bool:
+        try:
+            application = comtypes.client.CreateObject("Powerpoint.Application")
+            pptx_path = str(self.pptx_path.resolve())
+            print(f"{pptx_path=}")
+            presentation = application.Presentations.open(pptx_path)
+
+            presentation.Export(str(self.workdir.resolve()), FilterName="png")
+            print("Exported images to", self.workdir)
+            for slide in presentation.Slides:
+                # Extract notes from slide
+                notes = slide.NotesPage.Shapes.Placeholders(2).TextFrame.TextRange.Text
+                notes = notes.replace('\r', '\n')
+                (self.workdir / f"スライド{slide.SlideIndex}.txt").write_text(notes, encoding="utf8")
+                print("Exported note to", self.workdir / f"スライド{slide.SlideIndex}.txt")
+
+            presentation.close()
+            application.quit()
+
+            return True
+        except Exception as e:
+            import traceback
+            print(e, "\n", traceback.format_exc())
+            return False
+        
     
     def make_clip(self, img_path: Path, manuscrpt: str, fps: float) -> None:
         manuscript_margin = 0.8

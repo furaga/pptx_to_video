@@ -1,0 +1,15 @@
+# config.yml
+
+video:
+  fps: 30
+
+speech:
+  margin_sec: 0.5
+
+input:
+  type: pptx
+  pptx_path: samples/from_pptx/sample.pptx
+
+output:
+  filename: output.mp4
+
