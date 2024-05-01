@@ -5,7 +5,7 @@ from .TextToSpeech import TextToSpeech
 
 class Project:
     def __init__(self, workdir: Path) -> None:
-        self.workdir = workdir
+        self.workdir = Path(workdir)
         self.workdir.mkdir(parents=True, exist_ok=True)
         self.tts = TextToSpeech()
         print("Created workdir:", self.workdir)
@@ -44,14 +44,19 @@ class Project:
         
     def export_video(self, out_video_path: Path, fps: float=10) -> bool:
         try:
-            all_img_paths = list(self.workdir.glob("slides/*.png"))
-            all_manuscrpt_paths = list(self.workdir.glob("slides/*.txt"))
+            all_img_paths = list(self.workdir.glob("*.png"))
+            all_manuscrpt_paths = list(self.workdir.glob("*.txt"))
+            print(f"{len(all_img_paths)=}, {len(all_manuscrpt_paths)=}")
 
             all_clips = []
             for img_path, manuscrpt_path in zip(all_img_paths, all_manuscrpt_paths):
                 clip = self.make_clip(img_path, manuscrpt_path.read_text(encoding="utf8"), fps)
                 all_clips.append(clip)
                 print(img_path, manuscrpt_path)
+
+            if len(all_clips) <= 0:
+                print("No clips to concatenate")
+                return False
 
             video = moviepy.editor.concatenate_videoclips(all_clips)
             video.write_videofile(str(out_video_path))

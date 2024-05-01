@@ -8,34 +8,27 @@ from src.Project import Project
 def parse_args():
     parser = argparse.ArgumentParser(description="")
    #  parser.add_argument("--pptx_path", type=Path, required=True)
-    parser.add_argument("--workdir", type=Path, required=True)
-    parser.add_argument("--out_video_path", type=Path, required=True)
-    parser.add_argument("--config_path", type=Path, default=None)
+#    parser.add_argument("--workdir", type=Path, required=True)
+#    parser.add_argument("--out_video_path", type=Path, required=True)
+    parser.add_argument("--config_path", type=Path, default="data/config.yml")
     args = parser.parse_args()
     return args
 
 
 def main(args):
-    # workdir = Path("./__workdir__") / datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    workdir = args.workdir
-    print("workdir:", workdir)
+    import yaml
+    with open(args.config_path, "r", encoding="utf8") as f:
+        config = yaml.safe_load(f)
+    print(f"{config=}")
 
-    project = Project(workdir)
-    # ok = project.from_pptx(args.pptx_path)
+    project = Project(config["input"]["directory"])
 
-    # if not ok:
-    #     print("Failed to load pptx")
-    #     return
-
-    if args.config_path is not None:
-        pass
-
-    ok = project.export_video(args.out_video_path)
+    ok = project.export_video(config["output"]["filename"])
     if not ok:
         print("Failed to export video")
         return
 
-    print("Successefully exported video to", args.out_video_path)
+    print("Successefully exported video to", config["output"]["filename"])
 
 if __name__ == "__main__":
     main(parse_args())

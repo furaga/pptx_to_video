@@ -3,3 +3,4 @@ opencv-python
 moviepy
 simpleaudio
 beautifulsoup4
+pyyaml
