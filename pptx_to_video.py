@@ -7,7 +7,7 @@ from src.Project import Project
 def parse_args():
     parser = argparse.ArgumentParser(description="")
    #  parser.add_argument("--pptx_path", type=Path, required=True)
-    parser.add_argument("--config_path", type=Path, default="data/config.yml")
+    parser.add_argument("--config_path", type=Path, default="samples/sample1/config.yml")
     parser.add_argument("--input_dir", type=Path, default=None)
     parser.add_argument("--output_path", type=Path, default=None)
     args = parser.parse_args()

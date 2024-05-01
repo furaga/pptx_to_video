@@ -8,7 +8,7 @@ speech:
 
 input:
   type: png_txt
-  directory: data/sample/slides
+  directory: samples/sample1/slides
 
 output:
   filename: output.mp4
