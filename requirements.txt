@@ -7,3 +7,5 @@ pyyaml
 comtypes
 tqdm
 pytest
+streamlit
+python-dotenv

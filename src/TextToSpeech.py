@@ -3,8 +3,8 @@ import json
 
 
 class TextToSpeech:
-    def __init__(self, voicevox_url="http://59.147.132.97:50021"):
-#    def __init__(self, voicevox_url="http://127.0.0.1:50021"):
+    #    def __init__(self, voicevox_url="http://59.147.132.97:50021"):
+    def __init__(self, voicevox_url="http://127.0.0.1:50021"):
         self.voicevox_url = voicevox_url
 
     def tts(self, text, speed=1.1, speaker=3):

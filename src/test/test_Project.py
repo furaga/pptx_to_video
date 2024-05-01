@@ -1,8 +1,11 @@
 import unittest
 from pathlib import Path
 import yaml
+import dotenv
 
 from src.Project import Project
+
+dotenv.load_dotenv()
 
 sample_dir = Path(__file__).parent.parent.parent / "samples"
 

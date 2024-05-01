@@ -4,6 +4,7 @@ from pathlib import Path
 import moviepy.editor
 import comtypes.client
 import uuid
+import os
 
 from .TextToSpeech import TextToSpeech
 
@@ -14,7 +15,7 @@ class Project:
 
     def __exit__(self, exc_type, exc_value, traceback):
         if self.config["input"]["type"] == "pptx":
-            self.close()
+             self.close()
 
         # 例外は伝搬させたいので False を返す
         return False
@@ -79,12 +80,12 @@ class Project:
 
         all_clips = []
         for i, line in enumerate(lines):
-            try:
-                wav = self.tts.tts(line, speed=1.1, speaker=3)
-                # Save audio to temporary file
-                audio_path = self.workdir / f"{str(uuid.uuid4())}.wav"
-                audio_path.write_bytes(wav)
+            wav = self.tts.tts(line, speed=1.1, speaker=3)
+            # Save audio to temporary file
+            audio_path = self.workdir / f"{str(uuid.uuid4())}.wav"
+            audio_path.write_bytes(wav)
 
+            try:
                 # Load audio clip
                 audio_clip = moviepy.editor.AudioFileClip(str(audio_path))
                 audio_duration = len(wav) // (2 * 24000)
@@ -106,7 +107,7 @@ class Project:
                     line,
                     fontsize=fontsize,
                     color="green",
-                    font="C:/Windows/Fonts/msgothic.ttc",
+                    font=os.environ["MANUSCRIPTS_FONT"],
                 )
                 txt_clip.duration = video_clip.duration
                 txt_clip = txt_clip.set_position(("center", 0.85), relative=True)
