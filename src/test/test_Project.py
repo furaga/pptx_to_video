@@ -6,6 +6,7 @@ from src.Project import Project
 
 sample_dir = Path(__file__).parent.parent.parent / "samples"
 
+
 class TestProject(unittest.TestCase):
     def test_png_txt(self):
         with open(sample_dir / "from_png_txt/config.yml", "r", encoding="utf8") as f:
@@ -28,4 +29,3 @@ class TestProject(unittest.TestCase):
             project.export_video()
             self.assertTrue(out_path.exists())
             out_path.unlink()
-

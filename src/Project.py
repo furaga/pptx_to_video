@@ -139,9 +139,11 @@ class Project:
             all_pairs = list(zip(all_img_paths, all_manuscrpt_paths))
 
             from tqdm import tqdm
+
             for img_path, manuscrpt_path in tqdm(all_pairs):
                 clip = self.make_clip(
-                    img_path, manuscrpt_path.read_text(encoding="utf8"),
+                    img_path,
+                    manuscrpt_path.read_text(encoding="utf8"),
                     self.config["output"]["fps"],
                     self.config["output"]["manuscript_slide_margin"],
                     self.config["output"]["manuscript_line_interval"],
