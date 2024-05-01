@@ -1,7 +1,6 @@
 import shutil
 from pathlib import Path
 import moviepy.editor
-import simpleaudio
 from .TextToSpeech import TextToSpeech
 
 class Project:
@@ -21,16 +20,26 @@ class Project:
     
     def make_clip(self, img_path: Path, manuscrpt: str, fps: float) -> None:
         wav = self.tts.tts(manuscrpt, speed=1.1, speaker=3)
-        audio_path = self.workdir / "__wav__.wav"
+        # generate random string
+        import uuid
+        audio_path = self.workdir / f"{str(uuid.uuid4())}.wav"
         audio_path.write_bytes(wav)
-        wav_clip = moviepy.editor.AudioFileClip(str(audio_path))
-        wav_duration = len(wav) // (2 * 24000)
 
-        audio_margin = 1.0
+        try:
+            wav_clip = moviepy.editor.AudioFileClip(str(audio_path))
+            wav_duration = len(wav) // (2 * 24000)
 
-        clip = moviepy.editor.ImageClip(str(img_path), duration=wav_duration + audio_margin * 2)
-        clip.fps = fps
-        clip.audio = moviepy.editor.CompositeAudioClip([wav_clip.set_start(audio_margin)])
+            audio_margin = 1.0
+
+            clip = moviepy.editor.ImageClip(str(img_path), duration=wav_duration + audio_margin * 2)
+            clip.fps = fps
+            clip.audio = moviepy.editor.CompositeAudioClip([wav_clip.set_start(audio_margin)])
+        except Exception as e:
+            import traceback
+            print(e, "\n", traceback.format_exc())
+        finally:
+            audio_path.unlink()
+
         return clip
         
     def export_video(self, out_video_path: Path, fps: float=10) -> bool:

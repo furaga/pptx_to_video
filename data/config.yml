@@ -1,0 +1,15 @@
+# config.yml
+
+video:
+  fps: 30
+
+speech:
+  margin_sec: 0.5
+
+input:
+  type: png_txt
+  directory: data/sample/slides
+
+output:
+  filename: output.mp4
+
