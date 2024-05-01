@@ -1,10 +1,11 @@
 input:
-  type: png_txt
-  path: samples/from_png_txt/slides
+  type: pptx
+  path: samples/introduction/introduction.pptx
 
 output:
-  path: from_png_txt.mp4
+  path: introduction.mp4
   fps: 1
   manuscript_slide_margin: 0.8
   manuscript_line_interval: 0.4
+
 
