@@ -1,6 +1,7 @@
 import requests
 import json
 
+
 class TextToSpeech:
     def __init__(self, voicevox_url="http://127.0.0.1:50021"):
         self.voicevox_url = voicevox_url
@@ -18,4 +19,3 @@ class TextToSpeech:
             data=json.dumps(data),
         )
         return res2.content
-

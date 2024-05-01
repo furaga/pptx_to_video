@@ -1,15 +1,10 @@
-# config.yml
-
-video:
-  fps: 30
-
-speech:
-  margin_sec: 0.5
-
 input:
   type: png_txt
-  directory: samples/from_png_txt/slides
+  path: samples/from_png_txt/slides
 
 output:
-  filename: output.mp4
+  path: from_pptx.mp4
+  fps: 1
+  manuscript_slide_margin: 0.8
+  manuscript_line_interval: 0.4
 
