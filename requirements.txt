@@ -1,3 +1,5 @@
 ruff
-#python-opencv
-#moviepy
+opencv-python
+moviepy
+simpleaudio
+beautifulsoup4
