@@ -9,10 +9,9 @@ from src.Project import Project
 
 
 def main():
-    st.title("My Streamlit App")
-    st.write("Welcome to my app!")
+    st.title("PowerPoint to Video Converter")
 
-    pptx_file = st.file_uploader("Upload a file", type=["pptx"])
+    pptx_file = st.file_uploader("Upload a pptx file", type=["pptx"])
 
     if st.button("Convert to Video"):
         if pptx_file is not None:
@@ -35,7 +34,7 @@ def main():
 
             if output_path.exists():
                 st.download_button(
-                    label=f"Download Video {output_path.name}",
+                    label=f"Download {output_path.name}",
                     data=output_path.read_bytes(),
                     file_name=output_path.name,
                     mime="video/mp4",

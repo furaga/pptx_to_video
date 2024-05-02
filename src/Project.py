@@ -79,6 +79,10 @@ class Project:
         lines = [line.strip() for line in lines if len(line.strip()) > 0]
 
         all_clips = []
+
+        if len(lines) <= 0:
+            lines = ["（セリフが未設定です）"]
+
         for i, line in enumerate(lines):
             wav = self.tts.tts(line, speed=1.1, speaker=3)
             # Save audio to temporary file
@@ -110,7 +114,7 @@ class Project:
                     font=os.environ["MANUSCRIPTS_FONT"],
                 )
                 txt_clip.duration = video_clip.duration
-                txt_clip = txt_clip.set_position(("center", 0.85), relative=True)
+                txt_clip = txt_clip.set_position(("center", 0.9), relative=True)
 
                 # Composite clips
                 clip = moviepy.editor.CompositeVideoClip([video_clip, txt_clip])
