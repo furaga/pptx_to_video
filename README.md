@@ -36,5 +36,19 @@ streamlit run streamlit/app.py
 4. 変換成功したら出力動画のダウンロードボタンが表示されます
 
 
-# CLIツール（Windows, Mac）
+## 特殊コマンド
 
+1. ノート冒頭に `<video:動画ファイル名>` を指定すると、streamlit UIの "動画素材" で指定した動画をスライドに挿入できます
+
+2. ノートの各行の冒頭に `<speaker:id=xxx,speed=yyy>` をつけると、その行を読み上げる音声ID・スピードを変更できます
+
+
+# Mac環境で動かしたい場合
+
+Mac環境ではpptxファイルから画像・台本抽出する処理が動きません。  
+一方で、 `samples/from_png_txt/slides` のように画像(.png)と台本(.txt)を用意して、そこから動画生成することはできます。
+（powerpointの画像書き出し機能を作ると用意しやすい）
+
+```
+python pptx_to_video.py --config_path samples/from_png_txt/config.yml 
+```

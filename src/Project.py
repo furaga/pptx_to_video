@@ -1,7 +1,7 @@
-import shutil
 from typing import Dict
 from pathlib import Path
 import moviepy.editor
+import moviepy.video.fx.resize
 import comtypes.client
 import uuid
 import yaml
@@ -88,26 +88,26 @@ class Project:
             print(e, "\n", traceback.format_exc())
             return False
 
-    def parse_command(self, line :str):
+    def parse_command(self, line: str):
         line = line.strip()
-        line = line.replace(' ', '')
+        line = line.replace(" ", "")
 
         # <video:xxx.mp4>
-        if line.startswith("<video:") and '>' in line:
-            p_end = line.find('>')
-            video_path = line[len("<video:", p_end)]
-            return "insert_video", self.workdir / video_path
+        if line.startswith("<video:") and ">" in line:
+            p_end = line.find(">")
+            video_path = line[len("<video:") : p_end]
+            return "insert_video", self.workdir.parent / video_path
 
         # <voice:id=yy,speed=zz>
-        if line.startswith("<speaker:") and '>' in line:
-            p_end = line.find('>')
-            speaker = line[len("<speaker:", p_end)]
-            id, speed =None, None
+        if line.startswith("<speaker:") and ">" in line:
+            p_end = line.find(">")
+            speaker = line[len("<speaker:") : p_end]
+            id, speed = None, None
             try:
-                for cfg in speaker.split(','):
-                    if '=' not in cfg:
+                for cfg in speaker.split(","):
+                    if "=" not in cfg:
                         continue
-                    key, value = cfg.split('=')[:2]
+                    key, value = cfg.split("=")[:2]
                     if key == "id":
                         id = int(value)
                     if key == "speed":
@@ -117,6 +117,7 @@ class Project:
 
             return "speaker", (id, speed)
 
+        return "", None
 
     def make_clip(
         self,
@@ -129,7 +130,9 @@ class Project:
         cmd, args = self.parse_command(manuscript)
         if cmd == "insert_video":
             video_path = args
-            video_clip = moviepy.editor.VideoFileClip(video_path)
+            video_clip = moviepy.editor.VideoFileClip(str(video_path))
+            ref_img_clip = moviepy.editor.ImageClip(str(img_path))
+            video_clip = video_clip.resize(ref_img_clip.size)
             return video_clip
 
         lines = manuscript.split("\n")
@@ -141,7 +144,7 @@ class Project:
             lines = ["（セリフが未設定です）"]
 
         for i, line in enumerate(lines):
-            speaker_id =self.speaker_id
+            speaker_id = self.speaker_id
             speaker_speed = self.speaker_speed
 
             cmd, args = self.parse_command(line)
@@ -151,6 +154,12 @@ class Project:
                     speaker_id = new_speaker
                 if new_speed is not None:
                     speaker_speed = new_speed
+
+            # remove <xxx>
+            tag_start = line.find("<")
+            tag_end = line.rfind(">")
+            if tag_start >= 0 and tag_end >= 0:
+                line = line[:tag_start] + line[tag_end + 1 :]
 
             wav = self.tts.tts(line, speed=speaker_speed, speaker=speaker_id)
 
@@ -199,7 +208,7 @@ class Project:
 
         return moviepy.editor.concatenate_videoclips(all_clips)
 
-    def export_video(self, on_progress = None) -> bool:
+    def export_video(self, on_progress=None) -> bool:
         try:
             # Get all image and manuscript paths
             all_img_paths = list(self.workdir.glob("*.png"))
@@ -220,13 +229,16 @@ class Project:
             all_pairs = [(p, m) for p, m in all_pairs if _is_int(p.stem[4:])]
 
             # スライドXXのXXの数で並び替える
-            all_pairs = sorted(all_pairs, key = lambda pm: int(pm[0].stem[4:]))
+            all_pairs = sorted(all_pairs, key=lambda pm: int(pm[0].stem[4:]))
 
             from tqdm import tqdm
 
             for i, (img_path, manuscrpt_path) in tqdm(enumerate(all_pairs)):
                 if on_progress is not None:
-                    on_progress((i + 1) / len(all_pairs), f"Exporting a slide {img_path.name}")
+                    on_progress(
+                        (i + 1) / (len(all_pairs) + 2),
+                        f"Exporting a slide {img_path.name}",
+                    )
                 clip = self.make_clip(
                     img_path,
                     manuscrpt_path.read_text(encoding="utf8"),
@@ -244,6 +256,10 @@ class Project:
             video = moviepy.editor.concatenate_videoclips(all_clips)
 
             # Export video
+            if on_progress is not None:
+                on_progress(
+                    (len(all_pairs) + 1) / (len(all_pairs) + 2), "Writing a video file"
+                )
             video.write_videofile(self.config["output"]["path"])
             return True
         except Exception as e:
