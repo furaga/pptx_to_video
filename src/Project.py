@@ -4,7 +4,9 @@ from pathlib import Path
 import moviepy.editor
 import comtypes.client
 import uuid
+import yaml
 import os
+import time
 
 from .TextToSpeech import TextToSpeech
 
@@ -15,27 +17,45 @@ class Project:
 
     def __exit__(self, exc_type, exc_value, traceback):
         if self.config["input"]["type"] == "pptx":
-             self.close()
+            self.close()
 
         # 例外は伝搬させたいので False を返す
         return False
 
-    def __init__(self, config: Dict) -> None:
+    def __init__(self, config: Dict, user_import_server: bool = False) -> None:
         self.config = config
 
         if config["input"]["type"] == "pptx":
             self.pptx_path = Path(config["input"]["path"])
             self.workdir = self.pptx_path.with_suffix("")
             self.workdir.mkdir(parents=True, exist_ok=True)
-            self.import_pptx()
+            if user_import_server:
+                self.request_to_pptx_import_server()
+            else:
+                self.import_pptx()
         else:
             self.workdir = Path(config["input"]["path"])
             self.workdir.mkdir(parents=True, exist_ok=True)
 
+        self.speaker_id = config["output"].get("speaker_id", 3)
+        self.speaker_speed = config["output"].get("speaker_speed", 1.1)
         self.tts = TextToSpeech()
 
     def close(self):
-        shutil.rmtree(self.workdir)
+        #   shutil.rmtree(self.workdir)
+        pass
+
+    def request_to_pptx_import_server(self) -> bool:
+        config_path = Path(f"__pptx_import_server__watch_dir__/{str(uuid.uuid4())}.yml")
+        config_path.parent.mkdir(exist_ok=True, parents=True)
+        with open(config_path, "w", encoding="utf8") as f:
+            yaml.safe_dump(self.config, f)
+
+        while not Path(self.workdir / "__pptx_imported__").exists():
+            time.sleep(1)
+
+        print("[request_to_pptx_import_server] PPTX imported")
+        return True
 
     def import_pptx(self) -> bool:
         try:
@@ -60,6 +80,7 @@ class Project:
             presentation.close()
             application.quit()
 
+            (self.workdir / "__pptx_imported__").touch()
             return True
         except Exception as e:
             import traceback
@@ -67,15 +88,51 @@ class Project:
             print(e, "\n", traceback.format_exc())
             return False
 
+    def parse_command(self, line :str):
+        line = line.strip()
+        line = line.replace(' ', '')
+
+        # <video:xxx.mp4>
+        if line.startswith("<video:") and '>' in line:
+            p_end = line.find('>')
+            video_path = line[len("<video:", p_end)]
+            return "insert_video", self.workdir / video_path
+
+        # <voice:id=yy,speed=zz>
+        if line.startswith("<speaker:") and '>' in line:
+            p_end = line.find('>')
+            speaker = line[len("<speaker:", p_end)]
+            id, speed =None, None
+            try:
+                for cfg in speaker.split(','):
+                    if '=' not in cfg:
+                        continue
+                    key, value = cfg.split('=')[:2]
+                    if key == "id":
+                        id = int(value)
+                    if key == "speed":
+                        speed = float(value)
+            except Exception:
+                print(f"Failed to parse speaker command {line}")
+
+            return "speaker", (id, speed)
+
+
     def make_clip(
         self,
         img_path: Path,
-        manuscrpt: str,
+        manuscript: str,
         fps: float,
         manuscript_margin: float,
         line_interval: float,
     ) -> None:
-        lines = manuscrpt.split("\n")
+        cmd, args = self.parse_command(manuscript)
+        if cmd == "insert_video":
+            video_path = args
+            video_clip = moviepy.editor.VideoFileClip(video_path)
+            return video_clip
+
+        lines = manuscript.split("\n")
         lines = [line.strip() for line in lines if len(line.strip()) > 0]
 
         all_clips = []
@@ -84,7 +141,19 @@ class Project:
             lines = ["（セリフが未設定です）"]
 
         for i, line in enumerate(lines):
-            wav = self.tts.tts(line, speed=1.1, speaker=3)
+            speaker_id =self.speaker_id
+            speaker_speed = self.speaker_speed
+
+            cmd, args = self.parse_command(line)
+            if cmd == "speaker":
+                new_speaker, new_speed = args
+                if new_speaker is not None:
+                    speaker_id = new_speaker
+                if new_speed is not None:
+                    speaker_speed = new_speed
+
+            wav = self.tts.tts(line, speed=speaker_speed, speaker=speaker_id)
+
             # Save audio to temporary file
             audio_path = self.workdir / f"{str(uuid.uuid4())}.wav"
             audio_path.write_bytes(wav)
@@ -92,7 +161,7 @@ class Project:
             try:
                 # Load audio clip
                 audio_clip = moviepy.editor.AudioFileClip(str(audio_path))
-                audio_duration = len(wav) // (2 * 24000)
+                audio_duration = audio_clip.duration
 
                 # Load image clip
                 start = line_interval / 2 if i > 0 else manuscript_margin
@@ -127,12 +196,10 @@ class Project:
                 import traceback
 
                 print(e, "\n", traceback.format_exc())
-            finally:
-                audio_path.unlink()
 
         return moviepy.editor.concatenate_videoclips(all_clips)
 
-    def export_video(self) -> bool:
+    def export_video(self, on_progress = None) -> bool:
         try:
             # Get all image and manuscript paths
             all_img_paths = list(self.workdir.glob("*.png"))
@@ -143,9 +210,23 @@ class Project:
 
             all_pairs = list(zip(all_img_paths, all_manuscrpt_paths))
 
+            def _is_int(s: str):
+                try:
+                    _ = int(s)
+                    return True
+                except Exception:
+                    return False
+
+            all_pairs = [(p, m) for p, m in all_pairs if _is_int(p.stem[4:])]
+
+            # スライドXXのXXの数で並び替える
+            all_pairs = sorted(all_pairs, key = lambda pm: int(pm[0].stem[4:]))
+
             from tqdm import tqdm
 
-            for img_path, manuscrpt_path in tqdm(all_pairs):
+            for i, (img_path, manuscrpt_path) in tqdm(enumerate(all_pairs)):
+                if on_progress is not None:
+                    on_progress((i + 1) / len(all_pairs), f"Exporting a slide {img_path.name}")
                 clip = self.make_clip(
                     img_path,
                     manuscrpt_path.read_text(encoding="utf8"),

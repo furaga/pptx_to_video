@@ -3,6 +3,8 @@ input:
   path: samples/from_pptx/sample.pptx
 
 output:
+  speaker_id: 3
+  speaker_speed: 1.1
   path: from_pptx.mp4
   fps: 1
   manuscript_slide_margin: 0.8
