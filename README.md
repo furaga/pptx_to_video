@@ -8,12 +8,17 @@
 1. 以下のコマンドでpythonをセットアップしてください（
 python 3.11.9で動作確認）
 
-
 ```
 pip install -r requirements.txt
 ```
 
 2. VOICEVOXをローカルで起動してください
+
+3. [ImageMagick](https://imagemagick.org/script/download.php)をインストール
+
+4. .env.sampleを参考に.envを作成
+
+4. PowerPointをインストールする（Mac版は不要）
 
 # How to use
 

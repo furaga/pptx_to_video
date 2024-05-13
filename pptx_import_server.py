@@ -2,7 +2,9 @@ import argparse
 from pathlib import Path
 import yaml
 import time
+import dotenv
 
+dotenv.load_dotenv()
 from src.Project import Project
 
 
@@ -34,7 +36,4 @@ def main(args):
 
 
 if __name__ == "__main__":
-    import dotenv
-
-    dotenv.load_dotenv()
     main(parse_args())
