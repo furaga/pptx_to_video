@@ -155,11 +155,14 @@ class Project:
                 if new_speed is not None:
                     speaker_speed = new_speed
 
-            # remove <xxx>
-            tag_start = line.find("<")
+            # remove <speaker:xx>
+            tag_start =line.find("<speaker:")
             tag_end = line.rfind(">")
             if tag_start >= 0 and tag_end >= 0:
                 line = line[:tag_start] + line[tag_end + 1 :]
+
+            if line.strip() == "":
+                continue
 
             wav = self.tts.tts(line, speed=speaker_speed, speaker=speaker_id)
 
@@ -185,6 +188,7 @@ class Project:
 
                 # Create text clip
                 fontsize = video_clip.size[0] // 30
+                print("========", line, "==========")
                 txt_clip = moviepy.editor.TextClip(
                     line,
                     fontsize=fontsize,
