@@ -7,12 +7,14 @@ import uuid
 import yaml
 import os
 import time
+import traceback
 
 from .TextToSpeech import TextToSpeech
 
 
 class Project:
     def __enter__(self):
+        self.errors = ""
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -40,6 +42,7 @@ class Project:
         self.speaker_id = config["output"].get("speaker_id", 3)
         self.speaker_speed = config["output"].get("speaker_speed", 1.1)
         self.tts = TextToSpeech()
+        self.errors = ""
 
     def close(self):
         #   shutil.rmtree(self.workdir)
@@ -88,6 +91,9 @@ class Project:
             print(e, "\n", traceback.format_exc())
             return False
 
+    def log_error(self, msg):
+        self.errors += msg + "\n"
+
     def parse_command(self, line: str):
         line = line.strip()
         line = line.replace(" ", "")
@@ -98,7 +104,16 @@ class Project:
             video_path = line[len("<video:") : p_end]
             return "insert_video", self.workdir.parent / video_path
 
-        # <voice:id=yy,speed=zz>
+        # <wait:waittime>
+        if line.startswith("<wait:") and ">" in line:
+            p_end = line.find(">")
+            try:
+                wait_time = float(line[len("<wait:") : p_end])
+            except Exception:
+                self.log_error(f"Failed to parse wait command {line}")
+            return "wait", wait_time
+
+        # <speaker:id=yy,speed=zz>
         if line.startswith("<speaker:") and ">" in line:
             p_end = line.find(">")
             speaker = line[len("<speaker:") : p_end]
@@ -113,7 +128,7 @@ class Project:
                     if key == "speed":
                         speed = float(value)
             except Exception:
-                print(f"Failed to parse speaker command {line}")
+                self.log_error(f"Failed to parse speaker command {line}")
 
             return "speaker", (id, speed)
 
@@ -126,6 +141,8 @@ class Project:
         fps: float,
         manuscript_margin: float,
         line_interval: float,
+        fontsize_ratio: float,
+        fontcolor: str,
     ) -> None:
         cmd, args = self.parse_command(manuscript)
         if cmd == "insert_video":
@@ -141,7 +158,8 @@ class Project:
         all_clips = []
 
         if len(lines) <= 0:
-            lines = ["（セリフが未設定です）"]
+            # 台本未設定の場合
+            return moviepy.editor.ImageClip(str(img_path), duration=5.0)
 
         for i, line in enumerate(lines):
             speaker_id = self.speaker_id
@@ -155,8 +173,17 @@ class Project:
                 if new_speed is not None:
                     speaker_speed = new_speed
 
+            wait_time = 0
+            if cmd == "wait":
+                wait_time = args
+
             # remove <speaker:xx>
-            tag_start =line.find("<speaker:")
+            tag_start = line.find("<speaker:")
+            tag_end = line.rfind(">")
+            if tag_start >= 0 and tag_end >= 0:
+                line = line[:tag_start] + line[tag_end + 1 :]
+
+            tag_start = line.find("<wait:")
             tag_end = line.rfind(">")
             if tag_start >= 0 and tag_end >= 0:
                 line = line[:tag_start] + line[tag_end + 1 :]
@@ -170,45 +197,42 @@ class Project:
             audio_path = self.workdir / f"{str(uuid.uuid4())}.wav"
             audio_path.write_bytes(wav)
 
-            try:
-                # Load audio clip
-                audio_clip = moviepy.editor.AudioFileClip(str(audio_path))
-                audio_duration = audio_clip.duration
+            # Load audio clip
+            audio_clip = moviepy.editor.AudioFileClip(str(audio_path))
+            # 音の最後のノイズが乗ることがあるので除去
+            audio_clip.duration = audio_clip.duration - 0.01
+            audio_duration = audio_clip.duration
 
-                # Load image clip
-                start = line_interval / 2 if i > 0 else manuscript_margin
-                end = line_interval / 2 if i < len(lines) - 1 else manuscript_margin
-                video_clip = moviepy.editor.ImageClip(
-                    str(img_path), duration=audio_duration + start + end
-                )
-                video_clip.fps = fps
-                video_clip.audio = moviepy.editor.CompositeAudioClip(
-                    [audio_clip.set_start(start)]
-                )
+            # Load image clip
+            start = line_interval / 2 if i > 0 else manuscript_margin
+            start += wait_time
+            end = line_interval / 2 if i < len(lines) - 1 else manuscript_margin
+            video_clip = moviepy.editor.ImageClip(
+                str(img_path), duration=audio_duration + start + end
+            )
+            video_clip.fps = fps
+            video_clip.audio = moviepy.editor.CompositeAudioClip(
+                [audio_clip.set_start(start)]
+            )
 
-                # Create text clip
-                fontsize = video_clip.size[0] // 30
-                print("========", line, "==========")
-                txt_clip = moviepy.editor.TextClip(
-                    line,
-                    fontsize=fontsize,
-                    color="green",
-                    font=os.environ["MANUSCRIPTS_FONT"],
-                )
-                txt_clip.duration = video_clip.duration
-                txt_clip = txt_clip.set_position(("center", 0.9), relative=True)
+            # Create text clip
+            fontsize = int(video_clip.size[0] * fontsize_ratio)
+            print("========", line, "==========")
+            txt_clip = moviepy.editor.TextClip(
+                line,
+                fontsize=fontsize,
+                color=fontcolor,
+                font=os.environ["MANUSCRIPTS_FONT"],
+            )
+            txt_clip.duration = video_clip.duration
+            txt_clip = txt_clip.set_position(("center", 0.9), relative=True)
 
-                # Composite clips
-                clip = moviepy.editor.CompositeVideoClip([video_clip, txt_clip])
-                clip.duration = video_clip.duration
+            # Composite clips
+            clip = moviepy.editor.CompositeVideoClip([video_clip, txt_clip])
+            clip.duration = video_clip.duration
 
-                # Append clip
-                all_clips.append(clip)
-
-            except Exception as e:
-                import traceback
-
-                print(e, "\n", traceback.format_exc())
+            # Append clip
+            all_clips.append(clip)
 
         return moviepy.editor.concatenate_videoclips(all_clips)
 
@@ -246,9 +270,11 @@ class Project:
                 clip = self.make_clip(
                     img_path,
                     manuscrpt_path.read_text(encoding="utf8"),
-                    self.config["output"]["fps"],
-                    self.config["output"]["manuscript_slide_margin"],
-                    self.config["output"]["manuscript_line_interval"],
+                    self.config["output"].get("fps", 30),
+                    self.config["output"].get("manuscript_slide_margin", 1.0),
+                    self.config["output"].get("manuscript_line_interval", 0.5),
+                    self.config["output"].get("fontsize_ratio", 0.025),
+                    self.config["output"].get("font_color", "green"),
                 )
                 all_clips.append(clip)
 
@@ -267,7 +293,5 @@ class Project:
             video.write_videofile(self.config["output"]["path"])
             return True
         except Exception as e:
-            import traceback
-
-            print(e, "\n", traceback.format_exc())
+            self.log_error(f"{e}\n{traceback.format_exc()}\n")
             return False
