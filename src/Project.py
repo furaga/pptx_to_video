@@ -143,7 +143,7 @@ class Project:
         line_interval: float,
         fontsize_ratio: float,
         fontcolor: str,
-    ) -> None:
+    ):
         cmd, args = self.parse_command(manuscript)
         if cmd == "insert_video":
             video_path = args
@@ -159,7 +159,9 @@ class Project:
 
         if len(lines) <= 0:
             # 台本未設定の場合
-            return moviepy.editor.ImageClip(str(img_path), duration=5.0)
+            img_clip = moviepy.editor.ImageClip(str(img_path), duration=5.0)
+            img_clip.fps = fps
+            return img_clip
 
         for i, line in enumerate(lines):
             speaker_id = self.speaker_id
@@ -200,7 +202,7 @@ class Project:
             # Load audio clip
             audio_clip = moviepy.editor.AudioFileClip(str(audio_path))
             # 音の最後のノイズが乗ることがあるので除去
-            audio_clip.duration = audio_clip.duration - 0.01
+            audio_clip.duration = audio_clip.duration - 0.05
             audio_duration = audio_clip.duration
 
             # Load image clip
@@ -218,6 +220,7 @@ class Project:
             # Create text clip
             fontsize = int(video_clip.size[0] * fontsize_ratio)
             print("========", line, "==========")
+            print(os.environ["MANUSCRIPTS_FONT"])
             txt_clip = moviepy.editor.TextClip(
                 line,
                 fontsize=fontsize,

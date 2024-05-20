@@ -4,6 +4,9 @@ from pathlib import Path
 import sys
 import shutil
 import datetime
+import dotenv
+
+dotenv.load_dotenv(".env")
 import moviepy.editor
 
 sys.path.append(str(Path(__file__).parent.parent))
@@ -147,8 +150,4 @@ def main():
 
 
 if __name__ == "__main__":
-    import dotenv
-
-    dotenv.load_dotenv()
-
     main()
