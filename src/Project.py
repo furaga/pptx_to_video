@@ -1,5 +1,6 @@
 from typing import Dict
 from pathlib import Path
+from exceptiongroup import catch
 import moviepy.editor
 import moviepy.video.fx.resize
 import comtypes.client
@@ -71,8 +72,12 @@ class Project:
             print("Exported images to", self.workdir)
             for slide in presentation.Slides:
                 # Extract notes from slide
-                notes = slide.NotesPage.Shapes.Placeholders(2).TextFrame.TextRange.Text
-                notes = notes.replace("\r", "\n")
+                notes = ""
+                try:
+                    notes = slide.NotesPage.Shapes.Placeholders(2).TextFrame.TextRange.Text
+                    notes = notes.replace("\r", "\n")
+                except Exception as e:
+                    print(e)
                 (self.workdir / f"スライド{slide.SlideIndex}.txt").write_text(
                     notes, encoding="utf8"
                 )
