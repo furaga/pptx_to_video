@@ -290,7 +290,7 @@ class Project:
                 on_progress(
                     (len(all_pairs) + 1) / (len(all_pairs) + 2), "Writing a video file"
                 )
-            video.write_videofile(self.config["output"]["path"])
+            video.write_videofile(self.config["output"]["path"], audio_codec="aac")
             return True
         except Exception as e:
             self.log_error(f"{e}\n{traceback.format_exc()}\n")
