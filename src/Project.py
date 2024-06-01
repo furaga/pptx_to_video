@@ -1,6 +1,5 @@
 from typing import Dict
 from pathlib import Path
-from exceptiongroup import catch
 import moviepy.editor
 import moviepy.video.fx.resize
 import comtypes.client
@@ -42,7 +41,8 @@ class Project:
 
         self.speaker_id = config["output"].get("speaker_id", 3)
         self.speaker_speed = config["output"].get("speaker_speed", 1.1)
-        self.tts = TextToSpeech()
+        self.voicevox_url = config["output"].get("voicevox_url", "http://127.0.0.1:50021")
+        self.tts = TextToSpeech(voicevox_url=self.voicevox_url)
         self.errors = ""
 
     def close(self):
@@ -72,12 +72,8 @@ class Project:
             print("Exported images to", self.workdir)
             for slide in presentation.Slides:
                 # Extract notes from slide
-                notes = ""
-                try:
-                    notes = slide.NotesPage.Shapes.Placeholders(2).TextFrame.TextRange.Text
-                    notes = notes.replace("\r", "\n")
-                except Exception as e:
-                    print(e)
+                notes = slide.NotesPage.Shapes.Placeholders(2).TextFrame.TextRange.Text
+                notes = notes.replace("\r", "\n")
                 (self.workdir / f"スライド{slide.SlideIndex}.txt").write_text(
                     notes, encoding="utf8"
                 )
@@ -148,7 +144,7 @@ class Project:
         line_interval: float,
         fontsize_ratio: float,
         fontcolor: str,
-    ):
+    ) -> None:
         cmd, args = self.parse_command(manuscript)
         if cmd == "insert_video":
             video_path = args
@@ -164,9 +160,7 @@ class Project:
 
         if len(lines) <= 0:
             # 台本未設定の場合
-            img_clip = moviepy.editor.ImageClip(str(img_path), duration=5.0)
-            img_clip.fps = fps
-            return img_clip
+            return moviepy.editor.ImageClip(str(img_path), duration=5.0)
 
         for i, line in enumerate(lines):
             speaker_id = self.speaker_id
@@ -207,7 +201,7 @@ class Project:
             # Load audio clip
             audio_clip = moviepy.editor.AudioFileClip(str(audio_path))
             # 音の最後のノイズが乗ることがあるので除去
-            audio_clip.duration = audio_clip.duration - 0.05
+            audio_clip.duration = audio_clip.duration - 0.01
             audio_duration = audio_clip.duration
 
             # Load image clip
@@ -225,7 +219,6 @@ class Project:
             # Create text clip
             fontsize = int(video_clip.size[0] * fontsize_ratio)
             print("========", line, "==========")
-            print(os.environ["MANUSCRIPTS_FONT"])
             txt_clip = moviepy.editor.TextClip(
                 line,
                 fontsize=fontsize,

@@ -3,13 +3,13 @@ input:
   path: samples/from_pptx/sample.pptx
 
 output:
+  font_color: green
+  fontsize_ratio: 0.025
   speaker_id: 3
   speaker_speed: 1.0
   path: from_pptx.mp4
   fps: 10
   manuscript_slide_margin: 1.5
   manuscript_line_interval: 0.5
-  fontsize_ratio: 0.025
-  font_color: green
 
 

@@ -87,7 +87,12 @@ def main():
         st.title("詳細設定")
         fontsize_percentage = st.number_input("字幕サイズ（フォントサイズ/スライド横幅[%]）", min_value=0.0, max_value=100.0, value=2.5)
         color_options = get_manuscript_colors()
-        fontcolor = st.selectbox("字幕の色", color_options, color_options.index("green"))        
+        fontcolor = st.selectbox("字幕の色", color_options, color_options.index("green"))
+
+        voicevox_url = st.text_input("読み上げAPIのURL", value="http://127.0.0.1:50021")
+        speaker_id = st.number_input("話者ID", min_value=0, max_value=100, value=3)
+        speaker_speed = st.number_input("読み上げ速度", min_value=0.01, max_value=100.0, value=1.0)
+
         manuscript_slide_margin = st.number_input("スライド間の読み上げの余白[秒]", min_value=0.0, max_value=100.0, value=1.5)
         manuscript_line_interval = st.number_input("行間の読み上げの余白[秒]", min_value=0.0, max_value=100.0, value=0.5)
         additional_vidoe_files = st.file_uploader(
@@ -95,6 +100,66 @@ def main():
             type=["mp4", "mkv"],
             accept_multiple_files=True,
         )
+       # with st.expander("話者ID一覧", expanded=False):
+        st.write("""参考：話者ID一覧
+|ID|名前|スタイル|
+|---|---|---|
+|0|四国めたん|あまあま|
+|1|ずんだもん|あまあま|
+|2|四国めたん|ノーマル|
+|3|ずんだもん|ノーマル|
+|4|四国めたん|セクシー|
+|5|ずんだもん|セクシー|
+|6|四国めたん|ツンツン|
+|7|ずんだもん|ツンツン|
+|8|春日部つむぎ|ノーマル|
+|9|波音リツ|ノーマル|
+|10|雨晴はう|ノーマル|
+|11|玄野武宏|ノーマル|
+|12|白上虎太郎|ふつう|
+|13|青山龍星|ノーマル|
+|14|冥鳴ひまり|ノーマル|
+|15|九州そら|あまあま|
+|16|九州そら|ノーマル|
+|17|九州そら|セクシー|
+|18|九州そら|ツンツン|
+|19|九州そら|ささやき|
+|20|もち子さん|ノーマル|
+|21|剣崎雌雄|ノーマル|
+|22|ずんだもん|ささやき|
+|23|WhiteCUL|ノーマル|
+|24|WhiteCUL|たのしい|
+|25|WhiteCUL|かなしい|
+|26|WhiteCUL|びえーん|
+|27|後鬼|人間ver.|
+|28|後鬼|ぬいぐるみver.|
+|29|No.7|ノーマル|
+|30|No.7|アナウンス|
+|31|No.7|読み聞かせ|
+|32|白上虎太郎|わーい|
+|33|白上虎太郎|びくびく|
+|34|白上虎太郎|おこ|
+|35|白上虎太郎|びえーん|
+|36|四国めたん|ささやき|
+|37|四国めたん|ヒソヒソ|
+|38|ずんだもん|ヒソヒソ|
+|39|玄野武宏|喜び|
+|40|玄野武宏|ツンギレ|
+|41|玄野武宏|悲しみ|
+|42|ちび式じい|ノーマル|
+|43|櫻歌ミコ|ノーマル|
+|44|櫻歌ミコ|第二形態|
+|45|櫻歌ミコ|ロリ|
+|46|小夜/SAYO|ノーマル|
+|47|ナースロボ＿タイプＴ|ノーマル|
+|48|ナースロボ＿タイプＴ|楽々|
+|49|ナースロボ＿タイプＴ|恐怖|
+|50|ナースロボ＿タイプＴ|内緒話|
+|51|†聖騎士 紅桜†|ノーマル|
+|52|雀松朱司|ノーマル|
+|53|麒ヶ島宗麟|ノーマル|
+                 
+""")        
 
     if st.button("変換"):
         remove_old_tmp_dirs()
@@ -116,6 +181,9 @@ def main():
                         save_uploaded_file(f, tmp_dir)
 
                 output_path = input_path.parent / f"{pptx_file.name}.mp4"
+                config["output"]["voicevox_url"] = voicevox_url
+                config["output"]["speaker_id"] = speaker_id
+                config["output"]["speaker_speed"] = speaker_speed
                 config["output"]["fontsize_ratio"] = fontsize_percentage / 100
                 config["output"]["font_color"] = fontcolor
                 config["output"]["manuscript_slide_margin"] = manuscript_slide_margin
